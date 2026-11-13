@@ -1,0 +1,48 @@
+name: Futures Signals Scan
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "all, watchlist, or single"
+        required: false
+        default: "all"
+      symbol:
+        description: "Optional symbol"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: futures-scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scanner
+        env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          SCANNER_SECRET: ${{ secrets.SCANNER_SECRET }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          ALLOWED_CHAT_ID: ${{ secrets.ALLOWED_CHAT_ID }}
+          SCAN_MODE: ${{ github.event.inputs.mode || 'all' }}
+          SCAN_SYMBOL: ${{ github.event.inputs.symbol || '' }}
+        run: python scanner/run_scan.py
